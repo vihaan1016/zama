@@ -3,6 +3,7 @@
 // (VITE_DEX_ADDRESS / VITE_BASE_TOKEN / VITE_QUOTE_TOKEN); ABIs are generated in
 // ../abis (copied from Foundry `out/`). See docs/FRONTEND_GUIDE.md.
 // ---------------------------------------------------------------------------
+import type { Abi } from 'viem'
 import DEX_ABI_JSON from '@/abis/BatchAuctionDEX.json'
 import TOKEN_ABI_JSON from '@/abis/ConfidentialToken.json'
 
@@ -14,8 +15,8 @@ export const DEX_ADDRESS = (import.meta.env.VITE_DEX_ADDRESS ?? ZERO) as `0x${st
 export const BASE_TOKEN_ADDRESS = (import.meta.env.VITE_BASE_TOKEN ?? ZERO) as `0x${string}`
 export const QUOTE_TOKEN_ADDRESS = (import.meta.env.VITE_QUOTE_TOKEN ?? ZERO) as `0x${string}`
 
-export const DEX_ABI = DEX_ABI_JSON
-export const CONFIDENTIAL_TOKEN_ABI = TOKEN_ABI_JSON
+export const DEX_ABI = DEX_ABI_JSON as Abi
+export const CONFIDENTIAL_TOKEN_ABI = TOKEN_ABI_JSON as Abi
 
 export const RELAYER_URL = (import.meta.env.VITE_RELAYER_URL ??
   'https://relayer.testnet.zama.cloud') as string
