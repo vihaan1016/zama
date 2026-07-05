@@ -1,0 +1,13 @@
+{
+  "name": "fba-dex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sealed-Bid Batch-Auction DEX (FHEVM)",
+  "dependencies": {
+    "@fhevm/solidity": "0.11.1",
+    "@openzeppelin/confidential-contracts": "0.5.1",
+    "@openzeppelin/contracts": "5.1.0",
+    "@openzeppelin/contracts-upgradeable": "5.1.0",
+    "encrypted-types": "^0.0.4"
+  }
+}

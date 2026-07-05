@@ -1,164 +1,79 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
-import "@fhevm-solidity-0.11.1/lib/FHE.sol";
+import {FHE, euint64, ebool} from "@fhevm/solidity/lib/FHE.sol";
+import {TickMath} from "../libraries/TickMath.sol";
 
 /// @title ClearingEngine
-/// @notice Tick-based clearing algorithm for sealed-bid batch auctions
-/// @dev Implements O(N × K) clearing where N=orders, K=ticks
-/// @dev Phase 1: All-or-nothing fills (no partial fills)
-contract ClearingEngine {
-    /// @notice Tick configuration
-    uint256 public constant MIN_TICK = 0;
-    uint256 public constant MAX_TICK = 999;     // 1000 ticks total
-    uint256 public constant TICK_COUNT = 1000;
+/// @notice Encrypted primitives for uniform-price batch clearing on a discrete tick grid.
+/// @dev Clearing never sorts. For each candidate tick it counts encrypted demand and supply,
+///      takes matched = min(demand, supply), and folds the running argmax entirely under FHE so
+///      that only the final winner (tick + volume) is ever decrypted. All operations are bounded
+///      and independent of ciphertext contents (no data-dependent branching), so a keeper can
+///      split the scan across transactions with predictable gas — the multi-block clearing design.
+abstract contract ClearingEngine {
+    // Re-export the grid so tests and the frontend can read it off the DEX.
+    uint256 public constant MIN_TICK = TickMath.MIN_TICK;
+    uint256 public constant MAX_TICK = TickMath.MAX_TICK;
+    uint256 public constant TICK_COUNT = TickMath.TICK_COUNT;
+    uint256 public constant MIN_PRICE = TickMath.MIN_PRICE;
+    uint256 public constant MAX_PRICE = TickMath.MAX_PRICE;
+    uint256 public constant TICK_SPACING = TickMath.TICK_SPACING;
 
-    /// @notice Price range mapping (example: $0.01 to $100)
-    /// @dev Tick i maps to price: MIN_PRICE + (i * TICK_SPACING)
-    uint256 public constant MIN_PRICE = 1e16;      // 0.01 USD (18 decimals)
-    uint256 public constant MAX_PRICE = 100e18;    // 100 USD
-    uint256 public constant TICK_SPACING = 99e15;  // ~0.099 USD per tick
-
-    /// @notice Tick aggregation structure
-    struct TickAggregate {
-        euint64 buyVolume;      // Total encrypted buy volume at this tick
-        euint64 sellVolume;     // Total encrypted sell volume at this tick
-        uint256 buyCount;       // Number of buy orders
-        uint256 sellCount;      // Number of sell orders
+    /// @notice Convert a tick index to its 18-decimal price.
+    function tickToPrice(uint256 tick) public pure returns (uint256) {
+        return TickMath.tickToPrice(tick);
     }
 
-    /// @notice Tick aggregates for current batch
-    mapping(uint256 => TickAggregate) public tickAggregates;
-
-    /// @notice Convert tick index to price
-    /// @param tick Tick index (0 to MAX_TICK)
-    /// @return price Price in wei
-    function tickToPrice(uint256 tick) public pure returns (uint256 price) {
-        require(tick <= MAX_TICK, "tick out of bounds");
-        return MIN_PRICE + (tick * TICK_SPACING);
+    /// @notice Convert a price to its tick index.
+    function priceToTick(uint256 price) public pure returns (uint256) {
+        return TickMath.priceToTick(price);
     }
 
-    /// @notice Convert price to nearest tick index
-    /// @param price Price in wei
-    /// @return tick Tick index
-    function priceToTick(uint256 price) public pure returns (uint256 tick) {
-        require(price >= MIN_PRICE && price <= MAX_PRICE, "price out of range");
-        return (price - MIN_PRICE) / TICK_SPACING;
+    /// @notice Demand contributed by one BUY order at candidate `tickEnc`.
+    /// @dev A buy with limit L clears at price p iff L >= p. Contributes its full size, else 0.
+    function _demandContribution(euint64 limit, euint64 size, euint64 tickEnc) internal returns (euint64) {
+        ebool willBuy = FHE.ge(limit, tickEnc);
+        return FHE.select(willBuy, size, FHE.asEuint64(0));
     }
 
-    /// @notice Add order to tick aggregates
-    /// @param isBuy True if buy order
-    /// @param limitPrice Encrypted limit price (tick index as euint64)
-    /// @param size Encrypted order size
-    function _addToTick(bool isBuy, euint64 limitPrice, euint64 size) internal {
-        // NOTE: In Phase 1, we'll need to iterate through ticks during clearing
-        // For now, this is a placeholder for the aggregation logic
-        // Full implementation requires conditional accumulation at each tick
-        
-        // Conceptual algorithm:
-        // for (uint256 tick = MIN_TICK; tick <= MAX_TICK; tick++) {
-        //     if (isBuy) {
-        //         // Buy order: add to all ticks <= limitPrice
-        //         ebool shouldAdd = FHE.le(FHE.asEuint64(tick), limitPrice);
-        //         euint64 addAmount = FHE.select(shouldAdd, size, FHE.asEuint64(0));
-        //         tickAggregates[tick].buyVolume = FHE.add(
-        //             tickAggregates[tick].buyVolume,
-        //             addAmount
-        //         );
-        //     } else {
-        //         // Sell order: add to all ticks >= limitPrice
-        //         ebool shouldAdd = FHE.ge(FHE.asEuint64(tick), limitPrice);
-        //         euint64 addAmount = FHE.select(shouldAdd, size, FHE.asEuint64(0));
-        //         tickAggregates[tick].sellVolume = FHE.add(
-        //             tickAggregates[tick].sellVolume,
-        //             addAmount
-        //         );
-        //     }
-        // }
+    /// @notice Supply contributed by one SELL order at candidate `tickEnc`.
+    /// @dev A sell with limit L clears at price p iff L <= p. Contributes its full size, else 0.
+    function _supplyContribution(euint64 limit, euint64 size, euint64 tickEnc) internal returns (euint64) {
+        ebool willSell = FHE.le(limit, tickEnc);
+        return FHE.select(willSell, size, FHE.asEuint64(0));
     }
 
-    /// @notice Find clearing price (tick where supply meets demand)
-    /// @dev Iterates through tick range to find equilibrium
-    /// @param tickStart Starting tick to scan
-    /// @param tickEnd Ending tick to scan
-    /// @return clearingTick Tick index with maximum matched volume
-    /// @return matchedVolume Volume matched at clearing price (plaintext)
-    function findClearingPrice(uint256 tickStart, uint256 tickEnd)
-        public
-        view
-        returns (uint256 clearingTick, uint256 matchedVolume)
+    /// @notice Matched volume at a tick is the short side: min(demand, supply).
+    function _matched(euint64 demand, euint64 supply) internal returns (euint64) {
+        return FHE.min(demand, supply);
+    }
+
+    /// @notice Fold one candidate tick into the running encrypted argmax.
+    /// @param bestVol Current best matched volume (encrypted).
+    /// @param bestTick Current best tick index (encrypted).
+    /// @param matchedVol Matched volume at the candidate tick (encrypted).
+    /// @param tickEnc Candidate tick index (encrypted).
+    /// @return newBestVol Updated best volume.
+    /// @return newBestTick Updated best tick.
+    /// @dev Strict `gt` keeps the FIRST (lowest) tick among equal-volume maxima, a deterministic
+    ///      tie-break that does not depend on order contents.
+    function _argmaxStep(euint64 bestVol, euint64 bestTick, euint64 matchedVol, euint64 tickEnc)
+        internal
+        returns (euint64 newBestVol, euint64 newBestTick)
     {
-        require(tickStart <= tickEnd && tickEnd <= MAX_TICK, "invalid tick range");
-
-        uint256 bestTick = tickStart;
-        uint256 maxVolume = 0;
-
-        // Scan ticks to find maximum matched volume
-        for (uint256 tick = tickStart; tick <= tickEnd; tick++) {
-            TickAggregate memory agg = tickAggregates[tick];
-
-            // Temporarily mock FHE.decrypt since synchronous decryption is removed in fhevm >= 0.4
-            uint64 buyVol = _mockDecrypt(agg.buyVolume);
-            uint64 sellVol = _mockDecrypt(agg.sellVolume);
-
-            // Matched volume is min(buy, sell)
-            uint256 matched = buyVol < sellVol ? buyVol : sellVol;
-
-            if (matched > maxVolume) {
-                maxVolume = matched;
-                bestTick = tick;
-            }
-        }
-
-        return (bestTick, maxVolume);
+        ebool better = FHE.gt(matchedVol, bestVol);
+        newBestVol = FHE.select(better, matchedVol, bestVol);
+        newBestTick = FHE.select(better, tickEnc, bestTick);
     }
 
-    /// @notice Clear all tick aggregates (called at batch start)
-    function _clearTicks() internal {
-        // In practice, we'd need to track which ticks were used
-        // For MVP, we can reset on-demand or use a batch-scoped mapping
-        // Placeholder: actual implementation would iterate used ticks
-    }
-
-    /// @notice Check if order should fill at clearing price
-    /// @dev Phase 1: All-or-nothing logic
-    /// @param isBuy Order type
-    /// @param limitPrice Order's encrypted limit price
-    /// @param clearingTick Clearing price tick index
-    /// @return shouldFill Encrypted boolean indicating fill decision
-    function shouldFillOrder(
-        bool isBuy,
-        euint64 limitPrice,
-        uint256 clearingTick
-    ) public returns (ebool shouldFill) {
-        euint64 clearingPriceEnc = FHE.asEuint64(uint64(clearingTick));
-
-        if (isBuy) {
-            // Buy order fills if limit >= clearing price
-            return FHE.ge(limitPrice, clearingPriceEnc);
-        } else {
-            // Sell order fills if limit <= clearing price
-            return FHE.le(limitPrice, clearingPriceEnc);
-        }
-    }
-
-    // Temporary mock for FHE.decrypt (Removed in fhevm >= 0.4)
-    function _mockDecrypt(euint64 value) internal view returns (uint64) {
-        return uint64(uint256(euint64.unwrap(value)));
-    }
-
-    /// @notice Get tick aggregate (for testing)
-    /// @param tick Tick index
-    /// @return buyVolume Encrypted buy volume
-    /// @return sellVolume Encrypted sell volume
-    /// @return buyCount Number of buy orders
-    /// @return sellCount Number of sell orders
-    function getTickAggregate(uint256 tick)
-        external
-        view
-        returns (euint64 buyVolume, euint64 sellVolume, uint256 buyCount, uint256 sellCount)
-    {
-        TickAggregate memory agg = tickAggregates[tick];
-        return (agg.buyVolume, agg.sellVolume, agg.buyCount, agg.sellCount);
+    /// @notice All-or-nothing fill decision for an order at the plaintext clearing tick.
+    /// @param isBuy Order side.
+    /// @param limit Encrypted limit tick.
+    /// @param clearingTick Plaintext clearing tick.
+    /// @return shouldFill Encrypted boolean: buy fills iff limit >= clearing, sell iff limit <= clearing.
+    function shouldFillOrder(bool isBuy, euint64 limit, uint256 clearingTick) internal returns (ebool shouldFill) {
+        euint64 clearingEnc = FHE.asEuint64(uint64(clearingTick));
+        return isBuy ? FHE.ge(limit, clearingEnc) : FHE.le(limit, clearingEnc);
     }
 }

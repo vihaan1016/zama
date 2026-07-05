@@ -1,196 +1,190 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.27;
 
-import "forge-std/Test.sol";
-import "../../src/core/BatchAuctionDEX.sol";
-import "../../src/mocks/MockConfidentialToken.sol";
+import {FhevmTest} from "forge-fhevm/FhevmTest.sol";
+import {externalEuint64, euint64} from "@fhevm/solidity/lib/FHE.sol";
+import {BatchAuctionDEX} from "../../src/core/BatchAuctionDEX.sol";
+import {ConfidentialToken} from "../../src/tokens/ConfidentialToken.sol";
+import {IBatchAuction} from "../../src/interfaces/IBatchAuction.sol";
 
-/// @title BatchAuctionDEX Test Suite
-/// @notice Unit tests for the sealed-bid batch auction DEX
-contract BatchAuctionDEXTest is Test {
-    BatchAuctionDEX public dex;
-    MockConfidentialToken public baseToken;
-    MockConfidentialToken public quoteToken;
+/// @title BatchAuctionDEX end-to-end tests on the mock FHEVM coprocessor.
+/// @notice Exercises the full sealed-bid lifecycle: encrypted submission -> multi-block encrypted
+///         clearing -> public-decrypt of the winner -> confidential settlement, and asserts the
+///         clearing tick + post-trade balances against a hand-computed reference.
+contract BatchAuctionDEXTest is FhevmTest {
+    BatchAuctionDEX internal dex;
+    ConfidentialToken internal base;
+    ConfidentialToken internal quote;
 
-    address public keeper;
-    address public alice;
-    address public bob;
+    address internal keeper;
+    address internal alice;
+    address internal bob;
+    address internal carol;
+    address internal dave;
 
-    uint256 constant BATCH_DURATION = 5 minutes;
-    uint256 constant INITIAL_BALANCE = 10e18;
+    uint256 internal constant DURATION = 5 minutes;
+    uint64 internal constant START = 1000; // starting balance per trader / DEX liquidity
 
-    function setUp() public {
-        // Setup accounts
+    function setUp() public override {
+        super.setUp();
+        // Clearing folds 1000 ticks into one running-best chain; relax only the depth cap.
+        disableHCUDepthLimit();
+
         keeper = address(this);
-        alice = address(0x1);
-        bob = address(0x2);
+        alice = makeAddr("alice");
+        bob = makeAddr("bob");
+        carol = makeAddr("carol");
+        dave = makeAddr("dave");
 
-        // Deploy tokens
-        baseToken = new MockConfidentialToken("Confidential USDC", "cUSDC");
-        quoteToken = new MockConfidentialToken("Confidential DAI", "cDAI");
+        base = new ConfidentialToken("Confidential ETH", "cETH");
+        quote = new ConfidentialToken("Confidential USD", "cUSD");
+        dex = new BatchAuctionDEX(keeper, address(base), address(quote), DURATION);
 
-        // Deploy DEX
-        dex = new BatchAuctionDEX(
-            keeper,
-            address(baseToken),
-            address(quoteToken),
-            BATCH_DURATION
-        );
-
-        // Mint initial tokens to traders
-        baseToken.mint(alice, INITIAL_BALANCE);
-        quoteToken.mint(alice, INITIAL_BALANCE);
-        baseToken.mint(bob, INITIAL_BALANCE);
-        quoteToken.mint(bob, INITIAL_BALANCE);
-
-        // Label addresses for better trace output
-        vm.label(address(dex), "BatchAuctionDEX");
-        vm.label(address(baseToken), "BaseToken");
-        vm.label(address(quoteToken), "QuoteToken");
-        vm.label(keeper, "Keeper");
-        vm.label(alice, "Alice");
-        vm.label(bob, "Bob");
+        // Fund traders and the DEX (central counterparty) with both legs.
+        address[4] memory traders = [alice, bob, carol, dave];
+        for (uint256 i = 0; i < traders.length; i++) {
+            base.mint(traders[i], START);
+            quote.mint(traders[i], START);
+            vm.startPrank(traders[i]);
+            base.setOperator(address(dex), uint48(block.timestamp + 30 days));
+            quote.setOperator(address(dex), uint48(block.timestamp + 30 days));
+            vm.stopPrank();
+        }
+        base.mint(address(dex), START);
+        quote.mint(address(dex), START);
     }
 
-    /// @notice Test initial deployment state
-    function test_InitialState() public {
+    // --------------------------------------------------------------- helpers
+
+    function _submit(address trader, IBatchAuction.OrderType side, uint64 size, uint64 tick) internal {
+        (externalEuint64 encSize, bytes memory sp) = encryptUint64(size, trader, address(dex));
+        (externalEuint64 encPrice, bytes memory pp) = encryptUint64(tick, trader, address(dex));
+        vm.prank(trader);
+        dex.submitOrder(side, encSize, encPrice, sp, pp);
+    }
+
+    /// @notice Scan the whole tick grid in HCU-sized chunks, one block per chunk.
+    /// @dev Each chunk is a separate keeper transaction on-chain (separate block, fresh HCU budget).
+    ///      `vm.roll` reproduces that so the per-block/per-tx HCU cap (20M) is respected — this is
+    ///      exactly the multi-block clearing design being exercised.
+    function _scanAll(uint256 chunk) internal {
+        uint256 maxTick = dex.MAX_TICK();
+        uint256 start = 0;
+        while (start <= maxTick) {
+            uint256 end = start + chunk - 1;
+            if (end > maxTick) end = maxTick;
+            dex.clearBatchRange(start, end);
+            vm.roll(block.number + 1);
+            start = end + 1;
+        }
+    }
+
+    /// @notice Run the keeper clearing steps and submit the decrypted clearing result.
+    function _clear() internal {
+        vm.warp(block.timestamp + DURATION + 1);
+        dex.closeBatch();
+        _scanAll(6);
+        dex.finalizeClearing();
+
+        (bytes32 vh, bytes32 th) = dex.getClearingHandles();
+        bytes32[] memory handles = new bytes32[](2);
+        handles[0] = vh;
+        handles[1] = th;
+        (uint256[] memory cts, bytes memory proof) = publicDecrypt(handles);
+        dex.submitClearingResult(handles, abi.encodePacked(cts), proof);
+    }
+
+    function _bal(ConfidentialToken t, address a) internal returns (uint64) {
+        return decrypt(t.confidentialBalanceOf(a));
+    }
+
+    // ----------------------------------------------------------------- tests
+
+    function test_InitialState() public view {
         assertEq(dex.keeper(), keeper);
-        assertEq(dex.baseToken(), address(baseToken));
-        assertEq(dex.quoteToken(), address(quoteToken));
-        assertEq(dex.batchDuration(), BATCH_DURATION);
+        assertEq(address(dex.baseToken()), address(base));
         assertEq(dex.currentBatchId(), 1);
-
-        IBatchAuction.Batch memory batch = dex.getCurrentBatch();
-        assertEq(uint256(batch.status), uint256(IBatchAuction.BatchStatus.Open));
-        assertEq(batch.batchId, 1);
+        assertEq(uint256(dex.getCurrentBatch().status), uint256(IBatchAuction.BatchStatus.Open));
     }
 
-    /// @notice Test token minting
-    function test_TokenMinting() public {
-        uint64 aliceBalance = baseToken.balanceOfDecrypted(alice);
-        assertEq(aliceBalance, uint64(INITIAL_BALANCE));
-
-        uint64 bobBalance = quoteToken.balanceOfDecrypted(bob);
-        assertEq(bobBalance, uint64(INITIAL_BALANCE));
-    }
-
-    /// @notice Test batch closes only after expiry
-    function test_BatchCloseAfterExpiry() public {
-        // Try to close immediately (should fail)
-        vm.expectRevert("batch not expired");
-        dex.closeBatch();
-
-        // Fast forward past batch end time
-        vm.warp(block.timestamp + BATCH_DURATION + 1);
-
-        // Now should succeed
-        dex.closeBatch();
-
-        IBatchAuction.Batch memory batch = dex.getCurrentBatch();
-        assertEq(uint256(batch.status), uint256(IBatchAuction.BatchStatus.Closed));
-    }
-
-    /// @notice Test only keeper can close batch
     function test_OnlyKeeperCanClose() public {
-        vm.warp(block.timestamp + BATCH_DURATION + 1);
-
+        vm.warp(block.timestamp + DURATION + 1);
         vm.prank(alice);
-        vm.expectRevert("only keeper");
+        vm.expectRevert(bytes("only keeper"));
         dex.closeBatch();
+        dex.closeBatch();
+        assertEq(uint256(dex.getCurrentBatch().status), uint256(IBatchAuction.BatchStatus.Closed));
+    }
 
-        // Keeper should succeed
+    function test_CannotCloseBeforeExpiry() public {
+        vm.expectRevert(bytes("batch not expired"));
         dex.closeBatch();
     }
 
-    /// @notice Test clearing requires batch to be closed
-    function test_ClearRequiresClosed() public {
-        vm.expectRevert("batch not closed");
-        dex.clearBatch(0, 999);
+    /// @notice Full lifecycle with a hand-computed reference clearing at tick 40, volume 10.
+    function test_FullLifecycle_ClearsAndSettles() public {
+        // Buyers (fill iff limit >= clearing tick), sellers (fill iff limit <= clearing tick).
+        _submit(alice, IBatchAuction.OrderType.Buy, 10, 50);
+        _submit(bob, IBatchAuction.OrderType.Buy, 5, 30);
+        _submit(carol, IBatchAuction.OrderType.Sell, 8, 20);
+        _submit(dave, IBatchAuction.OrderType.Sell, 4, 40);
+        assertEq(dex.getCurrentBatch().orderCount, 4);
 
-        // Close batch first
-        vm.warp(block.timestamp + BATCH_DURATION + 1);
-        dex.closeBatch();
+        _clear();
 
-        // Now clearing should work (may not find clearing price with 0 orders)
-        dex.clearBatch(0, 999);
-        
-        IBatchAuction.Batch memory batch = dex.getCurrentBatch();
-        assertEq(uint256(batch.status), uint256(IBatchAuction.BatchStatus.Cleared));
-    }
+        IBatchAuction.Batch memory b = dex.getBatch(1);
+        assertEq(uint256(b.status), uint256(IBatchAuction.BatchStatus.Cleared));
+        assertEq(b.clearingPrice, 40, "clearing tick");
+        assertEq(b.matchedVolume, 10, "matched volume");
 
-    /// @notice Test settle requires batch to be cleared
-    function test_SettleRequiresCleared() public {
-        vm.expectRevert("batch not cleared");
-        dex.settleBatch(0, 0);
-    }
+        dex.settleBatchRange(0, 4);
 
-    /// @notice Test tick to price conversion
-    function test_TickToPrice() public {
-        uint256 price0 = dex.tickToPrice(0);
-        assertEq(price0, dex.MIN_PRICE());
-
-        uint256 price999 = dex.tickToPrice(999);
-        assertLe(price999, dex.MAX_PRICE());
-
-        // Test price increases with tick
-        uint256 price500 = dex.tickToPrice(500);
-        assertGt(price500, price0);
-        assertLt(price500, price999);
-    }
-
-    /// @notice Test price to tick conversion
-    function test_PriceToTick() public {
-        uint256 midPrice = (dex.MIN_PRICE() + dex.MAX_PRICE()) / 2;
-        uint256 tick = dex.priceToTick(midPrice);
-        assertGe(tick, 0);
-        assertLe(tick, dex.MAX_TICK());
-
-        // Test round-trip conversion
-        uint256 price = dex.tickToPrice(tick);
-        uint256 tickAgain = dex.priceToTick(price);
-        assertEq(tick, tickAgain);
-    }
-
-    /// @notice Test batch opens automatically after settlement
-    function test_NewBatchOpensAfterSettlement() public {
-        // Close and clear first batch
-        vm.warp(block.timestamp + BATCH_DURATION + 1);
-        dex.closeBatch();
-        dex.clearBatch(0, 999);
-
-        // Settle (with 0 orders)
-        dex.settleBatch(0, 0);
-
-        // Check new batch opened
+        // New batch auto-opened after settlement.
         assertEq(dex.currentBatchId(), 2);
-        IBatchAuction.Batch memory batch = dex.getCurrentBatch();
-        assertEq(uint256(batch.status), uint256(IBatchAuction.BatchStatus.Open));
+        assertEq(uint256(dex.getBatch(1).status), uint256(IBatchAuction.BatchStatus.Settled));
+
+        // Fills at price 40: Alice(buy 10), Carol(sell 8), Dave(sell 4); Bob(buy) does not fill.
+        assertEq(_bal(base, alice), START + 10, "alice base");
+        assertEq(_bal(quote, alice), START - 400, "alice quote");
+        assertEq(_bal(base, bob), START, "bob base unchanged");
+        assertEq(_bal(quote, bob), START, "bob quote unchanged");
+        assertEq(_bal(base, carol), START - 8, "carol base");
+        assertEq(_bal(quote, carol), START + 320, "carol quote");
+        assertEq(_bal(base, dave), START - 4, "dave base");
+        assertEq(_bal(quote, dave), START + 160, "dave quote");
+
+        // DEX net: base +8+4-10 = +2 ; quote +400-320-160 = -80.
+        assertEq(_bal(base, address(dex)), START + 2, "dex base");
+        assertEq(_bal(quote, address(dex)), START - 80, "dex quote");
     }
 
-    /// @notice Test tick range bounds
-    function test_TickBounds() public {
-        assertEq(dex.MIN_TICK(), 0);
-        assertEq(dex.MAX_TICK(), 999);
-        assertEq(dex.TICK_COUNT(), 1000);
+    function test_PaginatedClearingMatchesSingleShot() public {
+        _submit(alice, IBatchAuction.OrderType.Buy, 10, 50);
+        _submit(carol, IBatchAuction.OrderType.Sell, 8, 20);
+
+        vm.warp(block.timestamp + DURATION + 1);
+        dex.closeBatch();
+        // Scan in HCU-sized contiguous chunks.
+        _scanAll(8);
+        dex.finalizeClearing();
+
+        (bytes32 vh, bytes32 th) = dex.getClearingHandles();
+        bytes32[] memory handles = new bytes32[](2);
+        handles[0] = vh;
+        handles[1] = th;
+        (uint256[] memory cts, bytes memory proof) = publicDecrypt(handles);
+        dex.submitClearingResult(handles, abi.encodePacked(cts), proof);
+
+        // Overlap region [20,50] matches min(10,8)=8; first max at tick 20.
+        IBatchAuction.Batch memory b = dex.getBatch(1);
+        assertEq(b.clearingPrice, 20, "clearing tick");
+        assertEq(b.matchedVolume, 8, "matched volume");
     }
 
-    /// @notice Test price range
-    function test_PriceRange() public {
-        uint256 minPrice = dex.MIN_PRICE();
-        uint256 maxPrice = dex.MAX_PRICE();
-        
-        assertEq(minPrice, 0.01e18);  // $0.01
-        assertEq(maxPrice, 100e18);   // $100
-    }
-
-    /// @notice Test keeper address
-    function test_KeeperAddress() public {
-        assertEq(dex.keeper(), keeper);
-    }
-
-    /// @notice Test batch order retrieval (empty batch)
-    function test_GetBatchOrdersEmpty() public {
-        uint256[] memory orders = dex.getBatchOrders(1);
-        assertEq(orders.length, 0);
+    function test_RejectsNonContiguousClearing() public {
+        vm.warp(block.timestamp + DURATION + 1);
+        dex.closeBatch();
+        vm.expectRevert(bytes("non-contiguous range"));
+        dex.clearBatchRange(5, 10);
     }
 }

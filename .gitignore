@@ -1,0 +1,21 @@
+# Node
+node_modules/
+
+# Foundry build artifacts
+out/
+cache/
+broadcast/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Keeper
+keeper/node_modules/
+keeper/dist/
+
+# Misc
+.DS_Store
+*.log
+foundry.lock
