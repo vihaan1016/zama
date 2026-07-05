@@ -26,7 +26,7 @@ with [`PROJECT_SUMMARY.md`](./PROJECT_SUMMARY.md) (what/why) and [`BACKEND_AUDIT
 
 ## 2. Stack & config
 
-Reference stack (see `docs/IMPLEMENTATION_PLAN*.md`): Next.js + wagmi/viem + the Zama relayer SDK.
+Reference stack: Next.js + wagmi/viem + the Zama relayer SDK.
 
 Install the relayer SDK for encryption + decryption:
 
