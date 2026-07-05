@@ -21,7 +21,15 @@ export function initSocket(server: HttpServer): Server {
   return io;
 }
 
-/** Broadcast a lifecycle event to all subscribers. Populated by the chain watcher in Phase 4. */
+/** Broadcast a lifecycle event to all subscribers. */
 export function broadcast(event: string, payload: unknown): void {
   io?.emit(event, payload);
 }
+
+export const emit = {
+  batchUpdate: (batch: unknown) => broadcast('batch:update', batch),
+  orderNew: (order: unknown) => broadcast('order:new', order),
+  batchCleared: (batch: unknown) => broadcast('batch:cleared', batch),
+  orderFilled: (order: unknown) => broadcast('order:filled', order),
+  batchSettled: (batch: unknown) => broadcast('batch:settled', batch),
+};
