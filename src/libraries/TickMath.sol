@@ -9,10 +9,13 @@ pragma solidity ^0.8.26;
 library TickMath {
     /// @notice Lowest tick index.
     uint256 internal constant MIN_TICK = 0;
-    /// @notice Highest tick index (1000 ticks total: 0..999).
-    uint256 internal constant MAX_TICK = 999;
+    /// @notice Highest tick index (32 ticks total: 0..31).
+    /// @dev The grid size is a pure gas/precision knob: raising MAX_TICK/TICK_COUNT widens the
+    ///      price grid, and the keeper simply folds more tick chunks per batch (clearing is already
+    ///      paginated and content-independent). 32 keeps clearing to a handful of keeper transactions.
+    uint256 internal constant MAX_TICK = 31;
     /// @notice Number of ticks in the grid.
-    uint256 internal constant TICK_COUNT = 1000;
+    uint256 internal constant TICK_COUNT = 32;
 
     /// @notice Price of tick 0, in 18-decimal units ($0.01).
     uint256 internal constant MIN_PRICE = 1e16;

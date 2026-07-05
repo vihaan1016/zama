@@ -121,20 +121,20 @@ contract BatchAuctionDEXTest is FhevmTest {
         dex.closeBatch();
     }
 
-    /// @notice Full lifecycle with a hand-computed reference clearing at tick 40, volume 10.
+    /// @notice Full lifecycle with a hand-computed reference clearing at tick 20, volume 10.
     function test_FullLifecycle_ClearsAndSettles() public {
         // Buyers (fill iff limit >= clearing tick), sellers (fill iff limit <= clearing tick).
-        _submit(alice, IBatchAuction.OrderType.Buy, 10, 50);
-        _submit(bob, IBatchAuction.OrderType.Buy, 5, 30);
-        _submit(carol, IBatchAuction.OrderType.Sell, 8, 20);
-        _submit(dave, IBatchAuction.OrderType.Sell, 4, 40);
+        _submit(alice, IBatchAuction.OrderType.Buy, 10, 25);
+        _submit(bob, IBatchAuction.OrderType.Buy, 5, 15);
+        _submit(carol, IBatchAuction.OrderType.Sell, 8, 10);
+        _submit(dave, IBatchAuction.OrderType.Sell, 4, 20);
         assertEq(dex.getCurrentBatch().orderCount, 4);
 
         _clear();
 
         IBatchAuction.Batch memory b = dex.getBatch(1);
         assertEq(uint256(b.status), uint256(IBatchAuction.BatchStatus.Cleared));
-        assertEq(b.clearingPrice, 40, "clearing tick");
+        assertEq(b.clearingPrice, 20, "clearing tick");
         assertEq(b.matchedVolume, 10, "matched volume");
 
         dex.settleBatchRange(0, 4);
@@ -143,24 +143,24 @@ contract BatchAuctionDEXTest is FhevmTest {
         assertEq(dex.currentBatchId(), 2);
         assertEq(uint256(dex.getBatch(1).status), uint256(IBatchAuction.BatchStatus.Settled));
 
-        // Fills at price 40: Alice(buy 10), Carol(sell 8), Dave(sell 4); Bob(buy) does not fill.
+        // Fills at price 20: Alice(buy 10), Carol(sell 8), Dave(sell 4); Bob(buy) does not fill.
         assertEq(_bal(base, alice), START + 10, "alice base");
-        assertEq(_bal(quote, alice), START - 400, "alice quote");
+        assertEq(_bal(quote, alice), START - 200, "alice quote");
         assertEq(_bal(base, bob), START, "bob base unchanged");
         assertEq(_bal(quote, bob), START, "bob quote unchanged");
         assertEq(_bal(base, carol), START - 8, "carol base");
-        assertEq(_bal(quote, carol), START + 320, "carol quote");
+        assertEq(_bal(quote, carol), START + 160, "carol quote");
         assertEq(_bal(base, dave), START - 4, "dave base");
-        assertEq(_bal(quote, dave), START + 160, "dave quote");
+        assertEq(_bal(quote, dave), START + 80, "dave quote");
 
-        // DEX net: base +8+4-10 = +2 ; quote +400-320-160 = -80.
+        // DEX net: base +8+4-10 = +2 ; quote +200-160-80 = -40.
         assertEq(_bal(base, address(dex)), START + 2, "dex base");
-        assertEq(_bal(quote, address(dex)), START - 80, "dex quote");
+        assertEq(_bal(quote, address(dex)), START - 40, "dex quote");
     }
 
     function test_PaginatedClearingMatchesSingleShot() public {
-        _submit(alice, IBatchAuction.OrderType.Buy, 10, 50);
-        _submit(carol, IBatchAuction.OrderType.Sell, 8, 20);
+        _submit(alice, IBatchAuction.OrderType.Buy, 10, 25);
+        _submit(carol, IBatchAuction.OrderType.Sell, 8, 10);
 
         vm.warp(block.timestamp + DURATION + 1);
         dex.closeBatch();
@@ -175,9 +175,9 @@ contract BatchAuctionDEXTest is FhevmTest {
         (uint256[] memory cts, bytes memory proof) = publicDecrypt(handles);
         dex.submitClearingResult(handles, abi.encodePacked(cts), proof);
 
-        // Overlap region [20,50] matches min(10,8)=8; first max at tick 20.
+        // Overlap region [10,25] matches min(10,8)=8; first max at tick 10.
         IBatchAuction.Batch memory b = dex.getBatch(1);
-        assertEq(b.clearingPrice, 20, "clearing tick");
+        assertEq(b.clearingPrice, 10, "clearing tick");
         assertEq(b.matchedVolume, 8, "matched volume");
     }
 

@@ -62,11 +62,20 @@ Clearing ──submitClearingResult──▶ Cleared ──settleBatchRange × N
 ### The gas/HCU reality (important)
 
 Measured against the mock coprocessor (20M HCU per transaction and per block): with 4 orders, each tick
-costs ~1.8M HCU, so a keeper transaction folds **~6–10 ticks**. A full 1000-tick scan therefore takes
-~100+ keeper transactions per batch. This is the honest cost of the 1000-tick grid. To reduce it in
-production, shrink the grid (the spec suggests a much smaller tick set) or scan only a plausible
-price sub-range. The contract already supports arbitrary chunk sizes, so this is purely a keeper/config
-choice.
+costs ~1.8M HCU (~2.2M gas), so a keeper transaction folds **~6 ticks**.
+
+The grid is currently **32 ticks** (`TickMath.MAX_TICK = 31`), chosen so a whole batch clears in a
+handful of keeper transactions:
+
+| Grid | Clearing txs / batch (4 orders, chunk 6) |
+|------|------------------------------------------|
+| 32 ticks (current) | 6 |
+| 1000 ticks | ~167 |
+
+Grid size is a pure gas/precision knob — nothing else in the contract depends on it. To scale up later,
+raise `MAX_TICK` / `TICK_COUNT` in `TickMath.sol`; the keeper (`CLEAR_CHUNK_TICKS`) already paginates and
+the clearing math is content-independent, so no other change is needed. For a wide grid, also consider
+scanning only a plausible price sub-range instead of the full grid.
 
 ## 3. Running it
 

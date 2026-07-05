@@ -24,20 +24,20 @@ contract TickMathTest is Test {
 
     function test_Bounds() public view {
         assertEq(TickMath.MIN_TICK, 0);
-        assertEq(TickMath.MAX_TICK, 999);
-        assertEq(TickMath.TICK_COUNT, 1000);
+        assertEq(TickMath.MAX_TICK, 31);
+        assertEq(TickMath.TICK_COUNT, 32);
         assertEq(h.tickToPrice(0), TickMath.MIN_PRICE);
         assertEq(h.tickToPrice(TickMath.MAX_TICK), TickMath.MAX_PRICE);
     }
 
     function test_Monotonic() public view {
-        assertGt(h.tickToPrice(500), h.tickToPrice(0));
-        assertLt(h.tickToPrice(500), h.tickToPrice(999));
+        assertGt(h.tickToPrice(16), h.tickToPrice(0));
+        assertLt(h.tickToPrice(16), h.tickToPrice(TickMath.MAX_TICK));
     }
 
     function test_RevertTickOutOfBounds() public {
         vm.expectRevert(bytes("tick out of bounds"));
-        h.tickToPrice(1000);
+        h.tickToPrice(TickMath.MAX_TICK + 1);
     }
 
     function test_RevertPriceOutOfRange() public {
