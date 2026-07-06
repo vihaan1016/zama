@@ -24,6 +24,26 @@ const queryClient = new QueryClient({
   },
 })
 
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {error: Error | null}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return <div style={{padding: '20px', color: 'red', background: 'white', zIndex: 9999, position: 'relative'}}>
+        <h2>React Error</h2>
+        <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{this.state.error.message}</pre>
+        <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{this.state.error.stack}</pre>
+      </div>;
+    }
+    return this.props.children;
+  }
+}
+
 function Root() {
   useEffect(() => {
     connectSocket()
@@ -31,7 +51,7 @@ function Root() {
     getFheInstance().catch(() => {})
   }, [])
   useLiveRefetch()
-  return <App />
+  return <ErrorBoundary><App /></ErrorBoundary>
 }
 
 function RainbowKitWithTheme({ children }: { children: React.ReactNode }) {
@@ -51,14 +71,16 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <RainbowKitWithTheme>
-            <RouterProvider router={router} />
-          </RainbowKitWithTheme>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ErrorBoundary>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <RainbowKitWithTheme>
+              <RouterProvider router={router} />
+            </RainbowKitWithTheme>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 )
