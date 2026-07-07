@@ -28,7 +28,7 @@ const SECTIONS = [
 export default function Docs() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
-      <h1 className="font-display font-800 text-3xl text-text-primary">How Sealed DEX works</h1>
+      <h1 className="font-display font-800 text-3xl text-text-primary">How Concord works</h1>
       <p className="mt-3 font-serif text-lg text-text-muted">
         A sealed-bid batch-auction DEX. Encrypted order flow → uniform-price clearing → confidential
         settlement.

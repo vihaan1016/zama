@@ -55,7 +55,7 @@ export default function Landing() {
         {...fadeUp(showIntro ? 0 : 3.2, 1)}
       >
         <span className="font-display font-800 text-sm tracking-wider text-[#231812]">
-          SEALED<span className="text-[#C8102E]">DEX</span>
+          CON<span className="text-[#C8102E]">CORD</span>
         </span>
         <div className="flex items-center gap-3">
           <Link

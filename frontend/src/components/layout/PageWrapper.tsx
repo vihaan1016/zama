@@ -31,7 +31,7 @@ export default function PageWrapper() {
             <p className={`text-xs font-mono transition-colors duration-300 ${
               isDark ? 'text-[rgba(242,242,242,0.55)]' : 'text-[rgba(35,24,18,0.50)]'
             }`}>
-              Sealed DEX — Ethereum Sepolia Testnet (Zama FHEVM)
+              Concord — Ethereum Sepolia Testnet (Zama FHEVM)
             </p>
             <div className={`flex items-center gap-4 text-xs font-mono transition-colors duration-300 ${
               isDark ? 'text-[rgba(242,242,242,0.55)]' : 'text-[rgba(35,24,18,0.50)]'

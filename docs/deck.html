@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Concord — Pitch Deck</title>
+<meta name="viewport" content="width=1280, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  @font-face {
+    font-family: "Satoshi";
+    src: url("./deck-assets/Satoshi-Variable.woff2") format("woff2");
+    font-weight: 300 900;
+    font-display: swap;
+  }
+
+  :root {
+    /* Ledger Paper — mirrors frontend/src/styles/globals.css */
+    --bg:        #F4EEE1;
+    --surface:   #FDF8EE;
+    --surface-2: #F7F1E3;
+    --ink:       #231812;
+    --muted:     rgba(35, 24, 18, 0.72);
+    --subtle:    rgba(35, 24, 18, 0.52);
+    --faint:     rgba(35, 24, 18, 0.34);
+    --accent:    #C8102E;   /* signal red */
+    --accent-dim:rgba(200, 16, 46, 0.10);
+    --yes:       #0B7A52;
+    --no:        #B42318;
+    --border:    rgba(62, 44, 30, 0.20);
+    --border-dim:rgba(62, 44, 30, 0.12);
+    --grid-line: rgba(62, 44, 30, 0.065);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); }
+  body {
+    font-family: "Satoshi", system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .slide {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+    padding: 72px 84px;
+  }
+  .slide:last-child { page-break-after: auto; }
+
+  /* Shared type ------------------------------------------------------- */
+  .mono { font-family: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+  .serif-i { font-family: "Satoshi", sans-serif; font-style: italic; font-weight: 800; }
+
+  .eyebrow {
+    display: inline-block;
+    font-family: "Satoshi", sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(200, 16, 46, 0.45);
+    background: var(--accent-dim);
+    border-radius: 999px;
+    padding: 7px 16px;
+  }
+  .demo-tag {
+    position: absolute;
+    top: 72px;
+    right: 84px;
+    font-family: "Caveat", cursive;
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+  .title {
+    font-family: "Satoshi", sans-serif;
+    font-weight: 900;
+    font-size: 62px;
+    line-height: 1.03;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    margin-top: 26px;
+  }
+  .title .hw {
+    font-family: "Caveat", cursive;
+    font-style: normal;
+    font-weight: 700;
+    text-transform: none;
+    color: var(--accent);
+    letter-spacing: 0.01em;
+    margin-left: 12px;
+  }
+  .subtitle {
+    margin-top: 22px;
+    font-family: "Satoshi", sans-serif;
+    font-size: 23px;
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 62ch;
+  }
+
+  /* Numbered lists ---------------------------------------------------- */
+  .rows { margin-top: 40px; display: grid; gap: 34px; }
+  .rows.two { grid-template-columns: 1fr 1fr; column-gap: 72px; }
+  .row { display: grid; grid-template-columns: auto 1fr; column-gap: 20px; align-items: start; }
+  .num {
+    font-family: "Caveat", cursive;
+    font-weight: 700;
+    font-size: 44px;
+    line-height: 1;
+    color: var(--accent);
+    min-width: 58px;
+  }
+  .row h3 { font-size: 25px; font-weight: 800; letter-spacing: -0.01em; }
+  .row p {
+    margin-top: 6px; font-size: 19px; line-height: 1.42; color: var(--muted);
+    font-family: "Satoshi", sans-serif;
+  }
+  .row p em { color: var(--ink); font-style: italic; }
+
+  .footpill {
+    position: absolute;
+    left: 84px;
+    bottom: 60px;
+    font-family: "Satoshi", sans-serif;
+    font-size: 17px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 10px 22px;
+  }
+
+  /* Split + screenshot framing --------------------------------------- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; height: 100%; }
+  .col-copy p {
+    font-family: "Satoshi", sans-serif;
+    font-size: 22px; line-height: 1.5; color: var(--muted); margin-top: 22px;
+  }
+  .col-copy p:first-child { margin-top: 0; }
+  .col-copy strong { color: var(--ink); font-family: "Satoshi", sans-serif; font-weight: 800; }
+  .col-copy .accent { color: var(--accent); font-family: "Satoshi", sans-serif; font-weight: 800; }
+  .col-copy .flow {
+    font-family: "Satoshi", sans-serif;
+    font-size: 22px; font-weight: 800; color: var(--ink);
+  }
+  .col-copy .flow .accent { font-family: "Satoshi", sans-serif; font-weight: 800; }
+
+  .shot { position: relative; display: flex; align-items: center; justify-content: center; }
+  .shot .frame {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 70px -34px rgba(62,44,30,0.55);
+  }
+  .shot .frame::before {
+    content: "";
+    position: absolute;
+    inset: -22px -22px auto auto;
+    width: 120%; height: 120%;
+    background: linear-gradient(135deg, rgba(200,16,46,0.22) 0%, rgba(200,16,46,0.05) 70%);
+    border-radius: 20px;
+    z-index: 0;
+  }
+  .shot img { position: relative; z-index: 1; display: block; max-width: 100%; height: auto; }
+
+  /* Cards ------------------------------------------------------------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 18px;
+    padding: 36px 38px 40px;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand .tile { width: 46px; height: 46px; }
+  .brand .name { font-size: 28px; font-weight: 800; letter-spacing: -0.01em; }
+  .brand .name .dot { color: var(--accent); }
+
+  .mega {
+    font-family: "Anton", "Satoshi", sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    line-height: 0.9;
+    text-transform: uppercase;
+  }
+
+  .code {
+    margin-top: 18px;
+    background: var(--surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 16px;
+    padding: 24px 26px;
+    font-family: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--ink);
+    white-space: pre;
+    overflow: hidden;
+  }
+  .code .c-com { color: var(--subtle); }
+  .code .c-str { color: var(--yes); }
+  .code .c-key { color: var(--accent); }
+
+  /* Lifecycle pipeline ------------------------------------------------ */
+  .pipe { display: flex; align-items: center; gap: 0; margin-top: 8px; }
+  .pipe .stage {
+    font-family: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 17px; font-weight: 500;
+    padding: 12px 22px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 999px;
+    color: var(--ink);
+  }
+  .pipe .stage.term { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .pipe .arr { color: var(--faint); margin: 0 12px; font-size: 20px; }
+
+  /* Sealed-slots grid (SealedSlots component) ------------------------- */
+  .slots { display: flex; flex-wrap: wrap; gap: 8px; max-width: 460px; }
+  .slots .cell {
+    width: 44px; height: 44px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    border: 1px solid var(--border-dim);
+    background: transparent;
+  }
+  .slots .cell.on {
+    background: var(--accent-dim);
+    border-color: rgba(200,16,46,0.4);
+  }
+
+  /* Tick grid (TickSlider component) ---------------------------------- */
+  .ticks { display: flex; align-items: flex-end; gap: 4px; height: 68px; }
+  .ticks .t { flex: 1; background: rgba(62,44,30,0.16); border-radius: 2px 2px 0 0; }
+  .ticks .t.sel { background: var(--accent); }
+
+  /* Buy/Sell segmented ------------------------------------------------ */
+  .seg { display: flex; gap: 10px; margin-bottom: 18px; }
+  .seg .b {
+    flex: 1; text-align: center; padding: 11px 0;
+    font-family: "Satoshi", sans-serif; font-weight: 800; font-size: 14px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    border-radius: 8px; border: 1px solid var(--border);
+    color: var(--muted); background: var(--surface);
+  }
+  .seg .b.buy { background: var(--yes); color: #fff; border-color: var(--yes); }
+  .field { font-family: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+</style>
+</head>
+<body>
+
+<!-- 1 · TITLE ---------------------------------------------------------- -->
+<section class="slide">
+  <div class="brand">
+    <svg class="tile" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="30" height="30" rx="7" fill="#FDF8EE" stroke="rgba(62,44,30,0.22)"/>
+      <path d="M11 15v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#C8102E" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="9" y="15" width="14" height="11" rx="2.5" fill="none" stroke="#C8102E" stroke-width="2.4"/>
+      <circle cx="16" cy="20" r="1.7" fill="#C8102E"/>
+    </svg>
+    <span class="name">CON<span class="dot">CORD</span></span>
+  </div>
+
+  <div style="font-family:'Caveat',cursive;font-weight:700;font-size:44px;color:var(--accent);margin-top:64px;">Built on the Zama FHE protocol</div>
+  <div class="mega" style="font-size:150px;color:var(--accent);margin-top:-4px;">CONCORD</div>
+  <div class="serif-i" style="font-size:40px;margin-top:32px;">Trade without showing your hand.</div>
+  <div class="mono" style="font-size:20px;color:var(--muted);margin-top:32px;letter-spacing:0.02em;">Ethereum Sepolia &nbsp;·&nbsp; euint64 sealed orders &nbsp;·&nbsp; EIP-712 user-decryption</div>
+  <div class="mono" style="font-size:19px;font-weight:700;color:var(--accent);margin-top:22px;">github.com/vihaan1016/zama</div>
+</section>
+
+<!-- 2 · PROBLEM -------------------------------------------------------- -->
+<section class="slide">
+  <div class="title">THE PROBLEM WITH<br /><span class="hw" style="margin-left:0;">open order books</span></div>
+  <div class="split" style="margin-top:36px;height:auto;">
+    <div class="card">
+      <div class="mono" style="font-size:15px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;">On a transparent DEX</div>
+      <div class="mega" style="font-size:70px;color:var(--ink);margin-top:18px;">FRONT-RUN</div>
+      <div style="height:8px;width:72%;background:var(--accent);border-radius:99px;margin:24px 0;"></div>
+      <div style="font-size:23px;font-weight:700;color:var(--accent);">The MEV tax on every fill</div>
+      <div style="font-family:'Satoshi',sans-serif;font-weight:400;font-size:20px;color:var(--muted);margin-top:14px;line-height:1.5;">Your order sits in the mempool before it executes — long enough for a searcher to trade ahead of it.</div>
+    </div>
+    <div class="rows" style="margin-top:0;">
+      <div class="row"><span class="num">01</span><div><h3>Visible mempool</h3><p>Every pending order is public before it settles. Searchers read it, front-run it, and sandwich it.</p></div></div>
+      <div class="row"><span class="num">02</span><div><h3>Limit prices leak intent</h3><p>An exposed limit price is a signal. It tells the market exactly where you value the asset before you fill.</p></div></div>
+      <div class="row"><span class="num">03</span><div><h3>Naive batching isn't enough</h3><p>Plain batch auctions fix timing, but if the book is still <em>readable</em>, the order flow is still exploitable.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · SOLUTION ------------------------------------------------------- -->
+<section class="slide">
+  <div class="title" style="font-size:54px;">ONE SEALED BOOK,<span class="hw">one price</span></div>
+  <div class="subtitle" style="margin-top:16px;">If no one can read your order before it clears, there is nothing to front-run. The contract discovers the clearing price under FHE — without ever seeing an individual bid.</div>
+  <div class="rows two" style="margin-top:30px;gap:26px;">
+    <div class="row"><span class="num">01</span><div><h3>Sealed submission</h3><p>Price and size are FHE ciphertexts before they touch the mempool. Only the side is public — the market sees a slot fill.</p></div></div>
+    <div class="row"><span class="num">03</span><div><h3>Confidential settlement</h3><p>Crossing orders settle as ERC-7984 transfers. You decrypt only your own fill — no one reads anyone else's.</p></div></div>
+    <div class="row"><span class="num">02</span><div><h3>Uniform price under FHE</h3><p>On close the contract computes one clearing price over the encrypted book — everyone crosses at the common price.</p></div></div>
+    <div class="row"><span class="num">04</span><div><h3>32-tick price grid</h3><p>Limit prices snap to a discrete on-chain grid ($0.01 → $3.11), keeping the encrypted math inside euint64.</p></div></div>
+  </div>
+  <div class="footpill">encrypted client-side · keeper clears the sealed book · you decrypt only your own fill</div>
+</section>
+
+<!-- 4 · HOW IT WORKS (lifecycle) --------------------------------------- -->
+<section class="slide">
+  <div class="eyebrow">Batch lifecycle</div>
+  <div class="title">FIVE STATES,<span class="hw">keeper-driven</span></div>
+  <div class="subtitle" style="margin-bottom:14px;">A batch opens for a fixed window. A keeper drives every transition — closing the batch, scanning the encrypted grid in gas-sized chunks, public-decrypting the winner, and settling confidentially.</div>
+  <div class="pipe" style="margin-top:26px;">
+    <span class="stage">Open</span><span class="arr">→</span>
+    <span class="stage">Closed</span><span class="arr">→</span>
+    <span class="stage">Clearing</span><span class="arr">→</span>
+    <span class="stage">Cleared</span><span class="arr">→</span>
+    <span class="stage term">Settled</span>
+  </div>
+  <div class="rows two" style="margin-top:44px;">
+    <div class="row"><span class="num">01</span><div><h3>Open → Closed</h3><p>Encrypted orders accumulate for the batch window; at the deadline the keeper closes submission.</p></div></div>
+    <div class="row"><span class="num">02</span><div><h3>Clearing</h3><p>The contract scans the 32-tick encrypted price grid in paginated, gas-sized chunks under FHE.</p></div></div>
+    <div class="row"><span class="num">03</span><div><h3>Cleared</h3><p>The winning tick is public-decrypted — the one uniform price plus the matched volume, an aggregate only.</p></div></div>
+    <div class="row"><span class="num">04</span><div><h3>Settled</h3><p>Crossing orders move as confidential ERC-7984 transfers. Each trader decrypts their own fill.</p></div></div>
+  </div>
+</section>
+
+<!-- 5 · END TO END ----------------------------------------------------- -->
+<section class="slide">
+  <div class="eyebrow">Live demo</div>
+  <div class="title">END-TO-END<span class="hw">on Sepolia</span></div>
+  <div class="subtitle">Connect a wallet and run the full loop — six steps, no leaving the app.</div>
+  <div class="rows two">
+    <div class="row"><span class="num">01</span><div><h3>Claim from the faucet</h3><p>Mint confidential test tokens to your wallet in one click.</p></div></div>
+    <div class="row"><span class="num">02</span><div><h3>Approve the DEX operator</h3><p>Authorize the DEX to move your ERC-7984 balances.</p></div></div>
+    <div class="row"><span class="num">03</span><div><h3>Encrypt &amp; submit</h3><p>Pick a side + tick + size; encrypt client-side; submit the sealed order.</p></div></div>
+    <div class="row"><span class="num">04</span><div><h3>Batch closes</h3><p>Watch the sealed book fill — slots, never contents — then the window shuts.</p></div></div>
+    <div class="row"><span class="num">05</span><div><h3>Keeper clears</h3><p>One uniform price is revealed over the encrypted book.</p></div></div>
+    <div class="row"><span class="num">06</span><div><h3>Decrypt your fill</h3><p>EIP-712 user-decryption reveals only your own result.</p></div></div>
+  </div>
+</section>
+
+<!-- 6 · BROWSE (real Landing screenshot) ------------------------------- -->
+<section class="slide">
+  <div class="eyebrow">Coverage</div>
+  <div class="demo-tag">demo · 1 / 6</div>
+  <div class="title">ENTER<span class="hw">the app</span></div>
+  <div class="split" style="margin-top:40px;height:auto;">
+    <div class="shot"><div class="frame"><img src="./deck-assets/landing.png" alt="Concord landing" /></div></div>
+    <div class="col-copy">
+      <p><strong>Trade without showing your hand.</strong> The landing lays out the whole thesis: sealed submission, one uniform price, confidential settlement.</p>
+      <p class="flow"><span class="accent">connect</span> → trade → view batches</p>
+      <p>A cream "ledger-paper" interface — every number in mono, nothing about your order ever rendered to anyone else.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · SEAL YOUR ORDER (TickSlider motif) ----------------------------- -->
+<section class="slide">
+  <div class="eyebrow">Correctness</div>
+  <div class="demo-tag">demo · 2 / 6</div>
+  <div class="title">SEAL<span class="hw">your order</span></div>
+  <div class="split" style="margin-top:44px;height:auto;">
+    <div class="card" style="padding:30px 32px 34px;">
+      <div class="seg">
+        <div class="b buy">Buy</div>
+        <div class="b">Sell</div>
+      </div>
+      <div class="mono" style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">
+        <span>Limit price</span><span style="color:var(--accent);">$1.51 · tick 15</span>
+      </div>
+      <div class="ticks" style="margin-top:12px;">
+        <div class="t" style="height:20%"></div><div class="t" style="height:26%"></div><div class="t" style="height:24%"></div>
+        <div class="t" style="height:34%"></div><div class="t" style="height:30%"></div><div class="t" style="height:42%"></div>
+        <div class="t" style="height:38%"></div><div class="t" style="height:50%"></div><div class="t" style="height:46%"></div>
+        <div class="t" style="height:58%"></div><div class="t" style="height:54%"></div><div class="t" style="height:66%"></div>
+        <div class="t" style="height:62%"></div><div class="t" style="height:74%"></div><div class="t" style="height:70%"></div>
+        <div class="t sel" style="height:100%"></div>
+        <div class="t" style="height:78%"></div><div class="t" style="height:72%"></div><div class="t" style="height:66%"></div>
+        <div class="t" style="height:60%"></div><div class="t" style="height:64%"></div><div class="t" style="height:52%"></div>
+        <div class="t" style="height:56%"></div><div class="t" style="height:44%"></div><div class="t" style="height:48%"></div>
+        <div class="t" style="height:36%"></div><div class="t" style="height:40%"></div><div class="t" style="height:30%"></div>
+        <div class="t" style="height:32%"></div><div class="t" style="height:24%"></div><div class="t" style="height:26%"></div>
+        <div class="t" style="height:20%"></div>
+      </div>
+      <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:var(--subtle);margin-top:8px;">
+        <span>$0.01</span><span>$3.11</span>
+      </div>
+      <div class="mono" style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-top:22px;">Size</div>
+      <div class="field" style="margin-top:8px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);font-size:18px;">250</div>
+    </div>
+    <div class="col-copy">
+      <p><strong>Pick side, tick, and size.</strong> The limit price snaps to a discrete 32-tick grid — the same <span class="mono" style="font-size:0.92em;">TickMath</span> the contract runs.</p>
+      <p class="flow">side · <span class="accent">tick</span> · size → encrypt</p>
+      <p>The tick index (0–31) and the size are both FHE-encrypted in the browser as <span class="mono" style="font-size:0.92em;">euint64</span> ciphertexts. Only the side stays public.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8 · THE SEALED BOOK (SealedSlots motif) ---------------------------- -->
+<section class="slide">
+  <div class="eyebrow">Confidentiality</div>
+  <div class="demo-tag">demo · 3 / 6</div>
+  <div class="title">THE SEALED<span class="hw">book</span></div>
+  <div class="split" style="margin-top:44px;height:auto;">
+    <div class="col-copy">
+      <p><strong>The market watches slots fill — never their contents.</strong> Each locked cell is one order in the batch. Price and size stay encrypted on-chain.</p>
+      <p class="flow">order in → <span class="accent">🔒 slot</span> → book grows</p>
+      <p>This is the whole point: there is no readable order flow to trade against. A searcher sees a count go up, and nothing else.</p>
+    </div>
+    <div>
+      <div class="mono" style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.14em;margin-bottom:16px;">Sealed orders (14)</div>
+      <div class="slots">
+        <div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div>
+        <div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell on">🔒</div><div class="cell"></div><div class="cell"></div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 · CLEAR AT ONE PRICE (ClearingResult motif) ---------------------- -->
+<section class="slide">
+  <div class="eyebrow">Correctness</div>
+  <div class="demo-tag">demo · 4 / 6</div>
+  <div class="title">CLEAR<span class="hw">at one price</span></div>
+  <div class="split" style="margin-top:44px;height:auto;">
+    <div style="display:flex;justify-content:center;">
+      <div style="width:420px;border:1px solid var(--accent);background:var(--accent-dim);border-radius:16px;padding:44px 40px;text-align:center;">
+        <div class="mono" style="font-size:13px;letter-spacing:0.25em;text-transform:uppercase;color:var(--accent);">Uniform clearing price</div>
+        <div class="mono" style="font-size:64px;color:var(--ink);margin-top:14px;font-weight:500;">$1.51</div>
+        <div class="mono" style="font-size:15px;color:var(--muted);margin-top:14px;">matched volume &nbsp;1,840</div>
+      </div>
+    </div>
+    <div class="col-copy">
+      <p><strong>Everyone who crosses trades at the same price</strong> — not their own bid. Under sealed submission that's incentive-compatible: you bid your true value.</p>
+      <p class="flow">scan grid → <span class="accent">public-decrypt winner</span></p>
+      <p>Clearing reveals only the winning tick and the matched volume — an aggregate. Individual orders never leak. <span class="serif-i" style="font-style:italic;">(Budish–Cramton–Shim, 2015.)</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- 10 · DECRYPT YOUR FILL (real Docs screenshot) ---------------------- -->
+<section class="slide">
+  <div class="eyebrow">Correctness · EIP-712</div>
+  <div class="demo-tag">demo · 5 / 6</div>
+  <div class="title">DECRYPT<span class="hw">your fill</span></div>
+  <div class="split" style="margin-top:40px;height:auto;">
+    <div class="shot"><div class="frame"><img src="./deck-assets/docs.png" alt="How Concord works" /></div></div>
+    <div class="col-copy">
+      <p>Your own fill is revealed through the <strong>EIP-712 user-decryption</strong> flow against the relayer.</p>
+      <p class="flow"><span class="accent">sign once</span> → session cached → your fill</p>
+      <p>Decrypting anyone else's fill fails the on-chain access check. The public only ever saw a ciphertext handle.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11 · PRIVACY PROOF ------------------------------------------------- -->
+<section class="slide">
+  <div class="eyebrow">The core guarantee</div>
+  <div class="title">YOU CAN'T READ<span class="hw">my order</span></div>
+  <div class="split" style="margin-top:40px;height:auto;align-items:start;">
+    <div class="card">
+      <div class="mono" style="font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:var(--yes);">What you CAN decrypt</div>
+      <div style="margin-top:18px;font-size:22px;font-weight:700;">Your own fill</div>
+      <div style="font-family:'Satoshi',sans-serif;font-weight:400;font-size:19px;color:var(--muted);margin-top:10px;line-height:1.5;">An EIP-712 request signed by your wallet authorizes decryption of handles the on-chain ACL granted to <em style="font-style:italic;">you</em>.</div>
+    </div>
+    <div class="card">
+      <div class="mono" style="font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:var(--no);">What you CANNOT</div>
+      <div style="margin-top:18px;font-size:22px;font-weight:700;">Anyone else's order</div>
+      <div style="font-family:'Satoshi',sans-serif;font-weight:400;font-size:19px;color:var(--muted);margin-top:10px;line-height:1.5;">Point the same flow at another trader's handle and it fails the access check. Privacy is enforced on-chain, not by the UI.</div>
+    </div>
+  </div>
+  <div class="footpill">FHE + on-chain ACL · the mempool only ever saw an encrypted handle</div>
+</section>
+
+<!-- 12 · EXTENSIBILITY / SCOPE ----------------------------------------- -->
+<section class="slide">
+  <div class="eyebrow">Extensibility</div>
+  <div class="title">32 TICKS NOW,<span class="hw">parameterized</span></div>
+  <div class="subtitle">The grid is a constant, not a hard-coding. Widening it is a parameter change — the encrypted math and the keeper's chunked scan already generalize.</div>
+  <div class="split" style="margin-top:34px;height:auto;align-items:start;">
+    <div>
+      <div style="font-size:21px;font-weight:700;"><span class="col-copy"><span class="accent">A</span></span> · Price grid — <span class="mono" style="font-size:0.9em;">lib/ticks.ts</span></div>
+      <div class="code"><span class="c-com">// widen the grid → more ticks</span>
+export const <span class="c-key">MAX_TICK</span> = 31
+export const <span class="c-key">TICK_SPACING_WEI</span> = 10n ** 17n
+export const <span class="c-key">MIN_PRICE_WEI</span>  = 10n ** 16n</div>
+    </div>
+    <div>
+      <div style="font-size:21px;font-weight:700;"><span class="col-copy"><span class="accent">B</span></span> · Indexer — metadata only</div>
+      <div class="code"><span class="c-com">// never price / size — those stay</span>
+<span class="c-com">// encrypted on-chain</span>
+batch: { id, status, orderCount,
+         clearingTick, matchedVolume }
+order: { batchId, trader, <span class="c-key">side</span> }</div>
+    </div>
+  </div>
+  <div class="footpill">read-only indexer · chain → REST + socket · the sealed fields are never persisted off-chain</div>
+</section>
+
+<!-- 13 · JUDGED ON ----------------------------------------------------- -->
+<section class="slide">
+  <div class="title">JUDGED<span class="hw">on</span></div>
+  <div class="rows two" style="margin-top:44px;">
+    <div class="row"><span class="num">01</span><div><h3>Confidentiality</h3><p>Price and size are euint64 ciphertexts end-to-end; only the side and post-clear aggregates are ever public.</p></div></div>
+    <div class="row"><span class="num">02</span><div><h3>Correctness</h3><p>Encrypt → submit → clear → settle → user-decrypt produce the expected on-chain results; 11/11 contract tests pass.</p></div></div>
+    <div class="row"><span class="num">03</span><div><h3>MEV-resistance</h3><p>No readable order flow before clearing — nothing to front-run or sandwich, by construction.</p></div></div>
+    <div class="row"><span class="num">04</span><div><h3>UX</h3><p>Faucet, operator approval, sealed submit, live batch fill, and clearing reveal — every state animated, never a raw revert.</p></div></div>
+    <div class="row"><span class="num">05</span><div><h3>Code quality</h3><p>Typed end-to-end; FHE isolated in hooks; keeper + read-only indexer; metadata-only off-chain store.</p></div></div>
+    <div class="row"><span class="num">06</span><div><h3>Production-readiness</h3><p>Sepolia + Zama relayer, public-RPC fallback, keeper in docker-compose, resumable paginated clearing.</p></div></div>
+  </div>
+</section>
+
+<!-- 14 · THANK YOU ----------------------------------------------------- -->
+<section class="slide">
+  <div class="brand">
+    <svg class="tile" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="30" height="30" rx="7" fill="#FDF8EE" stroke="rgba(62,44,30,0.22)"/>
+      <path d="M11 15v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#C8102E" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="9" y="15" width="14" height="11" rx="2.5" fill="none" stroke="#C8102E" stroke-width="2.4"/>
+      <circle cx="16" cy="20" r="1.7" fill="#C8102E"/>
+    </svg>
+    <span class="name">CON<span class="dot">CORD</span></span>
+  </div>
+
+  <div class="serif-i" style="font-size:40px;margin-top:66px;">Sealed bids, uniform price, confidential settlement.</div>
+  <div style="margin-top:6px;">
+    <span class="mega" style="font-size:150px;color:var(--faint);vertical-align:middle;">THANK</span>
+    <span style="font-family:'Caveat',cursive;font-weight:700;font-size:132px;color:var(--accent);margin-left:24px;">you</span>
+  </div>
+  <div class="mono" style="font-size:20px;font-weight:700;color:var(--accent);margin-top:28px;">github.com/vihaan1016/zama</div>
+  <div style="font-family:'Satoshi',sans-serif;font-weight:400;font-size:19px;color:var(--muted);margin-top:16px;">Not affiliated with Zama. Built on the public Zama Protocol.</div>
+</section>
+
+</body>
+</html>

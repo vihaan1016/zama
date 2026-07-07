@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// FBA DEX contract config. Addresses come from the deploy output via Vite env
+// Concord contract config. Addresses come from the deploy output via Vite env
 // (VITE_DEX_ADDRESS / VITE_BASE_TOKEN / VITE_QUOTE_TOKEN); ABIs are generated in
 // ../abis (copied from Foundry `out/`). See docs/FRONTEND_GUIDE.md.
 // ---------------------------------------------------------------------------

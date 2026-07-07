@@ -1,8 +1,8 @@
 {
-  "name": "fba-dex",
+  "name": "concord",
   "version": "0.1.0",
   "private": true,
-  "description": "Sealed-Bid Batch-Auction DEX (FHEVM)",
+  "description": "Concord — Sealed-Bid Batch-Auction DEX (FHEVM)",
   "dependencies": {
     "@fhevm/solidity": "0.11.1",
     "@openzeppelin/confidential-contracts": "0.5.1",

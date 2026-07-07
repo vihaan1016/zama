@@ -1,7 +1,7 @@
 # Frontend Build Guide
 
-Everything the frontend developer needs to build against the deployed backend. Read this together
-with [`PROJECT_SUMMARY.md`](./PROJECT_SUMMARY.md) (what/why) and [`BACKEND_AUDIT.md`](./BACKEND_AUDIT.md)
+Everything the frontend developer needs to build against the deployed backend. Read this together with
+the root [`README.md`](../README.md) (what/why/architecture) and [`BACKEND_AUDIT.md`](./BACKEND_AUDIT.md)
 (contract behaviour).
 
 > **The one thing the demo must prove on camera:** a trader submits an encrypted order, another trader

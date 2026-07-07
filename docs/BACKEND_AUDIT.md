@@ -101,7 +101,8 @@ forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast --verify
 
 ```bash
 cp keeper/.env.example keeper/.env   # set KEEPER_PRIVATE_KEY, DEX_ADDRESS, RELAYER_URL
-docker compose up --build            # keeper + postgres + prometheus (:9090) + grafana (:3001)
+cp indexer/.env.example indexer/.env # set DEX_ADDRESS, RPC_URL
+docker compose up --build            # postgres, keeper, indexer(:3001), prometheus(:9090), grafana(:3002)
 ```
 
-Grafana ships a provisioned "FBA DEX Keeper" dashboard; keeper metrics are at `keeper:9464/metrics`.
+Grafana ships a provisioned "Concord Keeper" dashboard; keeper metrics are at `keeper:9464/metrics`.

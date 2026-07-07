@@ -30,7 +30,7 @@ const walletGroups = [
 ]
 
 const connectors = connectorsForWallets(walletGroups, {
-  appName: 'FBA DEX',
+  appName: 'Concord',
   projectId: projectId ?? '',
 })
 

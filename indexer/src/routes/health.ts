@@ -3,7 +3,7 @@ import { Router } from 'express';
 const router = Router();
 
 router.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'fba-dex-indexer', ts: Date.now() });
+  res.json({ status: 'ok', service: 'concord-indexer', ts: Date.now() });
 });
 
 export default router;

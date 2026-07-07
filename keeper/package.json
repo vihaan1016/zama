@@ -1,5 +1,5 @@
 {
-  "name": "fba-dex-keeper",
+  "name": "concord-keeper",
   "version": "0.1.0",
   "private": true,
   "description": "Off-chain keeper that drives the BatchAuctionDEX lifecycle.",
