@@ -128,13 +128,21 @@ export class Keeper {
   private async driveSettlement(batch: Batch): Promise<void> {
     let cursor = batch.settleCursor;
     const total = batch.orderCount;
-    while (cursor < total) {
-      const end = bigintMin(cursor + BigInt(this.config.settleChunkOrders), total);
-      const hash = await this.send('settleBatchRange', [cursor, end]);
-      metrics.settleTxs.inc();
-      logger.info('settled order range', { batchId: Number(batch.batchId), start: Number(cursor), end: Number(end), hash });
-      cursor = end;
+
+    if (total === 0n) {
+      // Must call at least once to transition the contract state to Settled and open the next batch
+      const hash = await this.send('settleBatchRange', [0n, 0n]);
+      logger.info('settled empty batch', { batchId: Number(batch.batchId), hash });
+    } else {
+      while (cursor < total) {
+        const end = bigintMin(cursor + BigInt(this.config.settleChunkOrders), total);
+        const hash = await this.send('settleBatchRange', [cursor, end]);
+        metrics.settleTxs.inc();
+        logger.info('settled order range', { batchId: Number(batch.batchId), start: Number(cursor), end: Number(end), hash });
+        cursor = end;
+      }
     }
+
     metrics.batchesSettled.inc();
     await this.db.record(batch.batchId, 'settled');
     logger.info('batch fully settled', { batchId: Number(batch.batchId) });
