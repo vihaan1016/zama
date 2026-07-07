@@ -10,7 +10,7 @@ export class KeeperDb {
   private pool: pg.Pool | null;
 
   constructor(databaseUrl?: string) {
-    this.pool = databaseUrl ? new pg.Pool({ connectionString: databaseUrl }) : null;
+    this.pool = databaseUrl ? new pg.Pool({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } }) : null;
   }
 
   get enabled(): boolean {

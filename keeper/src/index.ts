@@ -24,6 +24,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  logger.error('fatal keeper error', { err: String(err) });
+  console.error('fatal keeper error', err);
   process.exit(1);
 });
