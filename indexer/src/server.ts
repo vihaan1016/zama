@@ -45,6 +45,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  logger.error('fatal indexer error', { err: String(err) });
+  logger.error('fatal indexer error', {
+    err: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+    errors: err instanceof AggregateError ? err.errors.map((e) => String(e)) : undefined,
+  });
   process.exit(1);
 });

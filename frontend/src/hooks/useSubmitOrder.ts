@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { useAccount, usePublicClient, useWriteContract } from 'wagmi'
 import { useQueryClient } from '@tanstack/react-query'
 import { DEX_ADDRESS, DEX_ABI, OrderType } from '@/config/contracts'
+import { estimateGasLimit, getGasFees } from '@/lib/gas'
 import { useEncryptOrder } from './useEncryptOrder'
 
 export type SubmitStep = 'idle' | 'encrypting' | 'submitting' | 'confirmed' | 'error'
@@ -33,11 +34,33 @@ export function useSubmitOrder() {
         const enc = await encryptOrder(address, tick, size)
 
         setStep('submitting')
+        const args = [side, enc.sizeHandle, enc.tickHandle, enc.sizeProof, enc.tickProof] as const
+        const estimatedGas = await estimateGasLimit(
+          publicClient,
+          {
+            address: DEX_ADDRESS,
+            abi: DEX_ABI,
+            functionName: 'submitOrder',
+            args,
+            account: address,
+          },
+          2_500_000n,
+          { throwOnRevert: true },
+        )
+        // submitOrder is ~450k gas in Foundry. Wallet/RPC estimators can wildly
+        // overshoot FHE calls, and Infura rejects those as "gas limit too high".
+        // Use the lower of estimate and a Sepolia-safe ceiling, with a floor that
+        // still leaves plenty of room over observed gas.
+        const gas = estimatedGas > 800_000n ? 800_000n : estimatedGas < 650_000n ? 650_000n : estimatedGas
+        console.info('submitOrder gas limit', gas.toString())
+        const fees = await getGasFees(publicClient)
         const hash = await writeContractAsync({
           address: DEX_ADDRESS,
           abi: DEX_ABI,
           functionName: 'submitOrder',
-          args: [side, enc.sizeHandle, enc.tickHandle, enc.sizeProof, enc.tickProof],
+          args,
+          gas,
+          ...fees,
         })
         setTxHash(hash)
         await publicClient?.waitForTransactionReceipt({ hash })

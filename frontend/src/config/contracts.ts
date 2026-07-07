@@ -19,7 +19,7 @@ export const DEX_ABI = DEX_ABI_JSON as Abi
 export const CONFIDENTIAL_TOKEN_ABI = TOKEN_ABI_JSON as Abi
 
 export const RELAYER_URL = (import.meta.env.VITE_RELAYER_URL ??
-  'https://relayer.testnet.zama.cloud') as string
+  'https://relayer.testnet.zama.org') as string
 
 /** BatchStatus mirror (IBatchAuction.BatchStatus). */
 export enum BatchStatus {

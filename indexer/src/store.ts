@@ -40,28 +40,36 @@ export class Store {
       logger.warn('DATABASE_URL unset — using in-memory store');
       return;
     }
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS batches (
-        batch_id      BIGINT PRIMARY KEY,
-        status        TEXT NOT NULL,
-        start_time    BIGINT,
-        end_time      BIGINT,
-        clearing_tick INTEGER,
-        matched_volume TEXT,
-        order_count   INTEGER NOT NULL DEFAULT 0
-      );
-      CREATE TABLE IF NOT EXISTS orders (
-        order_id  BIGINT PRIMARY KEY,
-        batch_id  BIGINT NOT NULL,
-        trader    TEXT NOT NULL,
-        side      TEXT NOT NULL,
-        filled    BOOLEAN NOT NULL DEFAULT FALSE,
-        tx_hash   TEXT
-      );
-      CREATE INDEX IF NOT EXISTS orders_batch_idx ON orders (batch_id);
-      CREATE INDEX IF NOT EXISTS orders_trader_idx ON orders (lower(trader));
-    `);
-    logger.info('store initialised (postgres)');
+    try {
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS batches (
+          batch_id      BIGINT PRIMARY KEY,
+          status        TEXT NOT NULL,
+          start_time    BIGINT,
+          end_time      BIGINT,
+          clearing_tick INTEGER,
+          matched_volume TEXT,
+          order_count   INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS orders (
+          order_id  BIGINT PRIMARY KEY,
+          batch_id  BIGINT NOT NULL,
+          trader    TEXT NOT NULL,
+          side      TEXT NOT NULL,
+          filled    BOOLEAN NOT NULL DEFAULT FALSE,
+          tx_hash   TEXT
+        );
+        CREATE INDEX IF NOT EXISTS orders_batch_idx ON orders (batch_id);
+        CREATE INDEX IF NOT EXISTS orders_trader_idx ON orders (lower(trader));
+      `);
+      logger.info('store initialised (postgres)');
+    } catch (err) {
+      logger.warn('postgres unavailable — falling back to in-memory store', {
+        err: err instanceof Error ? err.message : String(err),
+      });
+      await this.pool.end().catch(() => {});
+      this.pool = null;
+    }
   }
 
   async upsertBatch(b: Partial<BatchRow> & { batchId: string }): Promise<BatchRow> {

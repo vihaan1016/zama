@@ -19,7 +19,7 @@ export const config = {
   chainId: optionalNumber('CHAIN_ID', 11155111),
 
   /** Relayer endpoint used for off-chain public decryption of the clearing winner. */
-  relayerUrl: process.env.RELAYER_URL ?? 'https://relayer.testnet.zama.cloud',
+  relayerUrl: process.env.RELAYER_URL ?? 'https://relayer.testnet.zama.org',
 
   /** How many ticks to fold per clearBatchRange transaction (keep each tx under the HCU budget). */
   clearChunkTicks: optionalNumber('CLEAR_CHUNK_TICKS', 6),

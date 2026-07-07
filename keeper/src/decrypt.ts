@@ -1,4 +1,4 @@
-import { encodePacked, type Hex } from 'viem';
+import { type Hex } from 'viem';
 import { logger } from './logger.js';
 
 /**
@@ -24,23 +24,30 @@ export async function publicDecrypt(
   handles: Hex[],
 ): Promise<PublicDecryptResult> {
   // Loaded lazily so unit-level use of the keeper does not require the native SDK.
-  const { createInstance } = await import('@zama-fhe/relayer-sdk/node');
-  const instance = await createInstance({ chainId, relayerUrl } as never);
+  const { createInstance, SepoliaConfig } = await import('@zama-fhe/relayer-sdk/node');
+  const instance = await createInstance({
+    ...SepoliaConfig,
+    chainId,
+    relayerUrl,
+    network: process.env.RPC_URL ?? 'https://eth-sepolia.public.blastapi.io',
+  });
 
   logger.info('requesting public decryption', { handles });
-  // Returns a map handle -> value plus the KMS proof material.
+  // SDK >=0.4 returns the ABI-packed cleartexts and proof in the exact shape
+  // expected by FHE.checkSignatures, plus a handle -> plaintext map for logs.
   const res: {
-    values: Record<string, bigint | string>;
-    proof: Hex;
+    clearValues: Record<`0x${string}`, bigint | boolean | Hex>;
+    abiEncodedClearValues: Hex;
+    decryptionProof: Hex;
   } = await (instance as unknown as {
-    publicDecrypt: (h: Hex[]) => Promise<{ values: Record<string, bigint | string>; proof: Hex }>;
+    publicDecrypt: (h: Hex[]) => Promise<{
+      clearValues: Record<`0x${string}`, bigint | boolean | Hex>;
+      abiEncodedClearValues: Hex;
+      decryptionProof: Hex;
+    }>;
   }).publicDecrypt(handles);
 
-  const values = handles.map((h) => BigInt(res.values[h] ?? res.values[h.toLowerCase()] ?? 0));
-  const cleartexts = encodePacked(
-    values.map(() => 'uint256'),
-    values,
-  ) as Hex;
+  const values = handles.map((h) => BigInt(res.clearValues[h] ?? res.clearValues[h.toLowerCase() as `0x${string}`] ?? 0));
 
-  return { cleartexts, decryptionProof: res.proof, values };
+  return { cleartexts: res.abiEncodedClearValues, decryptionProof: res.decryptionProof, values };
 }

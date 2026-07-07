@@ -24,6 +24,33 @@ async function process(store: Store, logs: DecodedLog[]): Promise<void> {
   }
 }
 
+async function backfill(store: Store, address: `0x${string}`): Promise<void> {
+  const latest = await publicClient.getBlockNumber();
+  let fromBlock = config.START_BLOCK;
+  let count = 0;
+  const step = BigInt(config.BACKFILL_BLOCK_RANGE);
+
+  while (fromBlock <= latest) {
+    const toBlock = fromBlock + step - 1n > latest ? latest : fromBlock + step - 1n;
+    const logs = (await publicClient.getContractEvents({
+      address,
+      abi: dexEventsAbi,
+      fromBlock,
+      toBlock,
+    })) as DecodedLog[];
+    count += logs.length;
+    await process(store, logs);
+    fromBlock = toBlock + 1n;
+  }
+
+  logger.info('backfill fetched', {
+    count,
+    fromBlock: config.START_BLOCK.toString(),
+    toBlock: latest.toString(),
+    range: config.BACKFILL_BLOCK_RANGE,
+  });
+}
+
 /**
  * Backfill historical events from START_BLOCK, then watch live.
  * @returns an unwatch function for graceful shutdown.
@@ -38,14 +65,7 @@ export async function startChainWatcher(store: Store): Promise<() => void> {
 
   // Backfill.
   try {
-    const logs = (await publicClient.getContractEvents({
-      address,
-      abi: dexEventsAbi,
-      fromBlock: config.START_BLOCK,
-      toBlock: 'latest',
-    })) as DecodedLog[];
-    logger.info('backfill fetched', { count: logs.length });
-    await process(store, logs);
+    await backfill(store, address);
   } catch (err) {
     logger.error('backfill failed', { err: String(err) });
   }

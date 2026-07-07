@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, forwardRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -20,7 +20,10 @@ export function useToast() {
   return useContext(ToastContext)
 }
 
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
+const ToastItem = forwardRef<
+  HTMLDivElement,
+  { toast: Toast; onDismiss: (id: string) => void }
+>(function ToastItem({ toast, onDismiss }, ref) {
   useEffect(() => {
     if (toast.type === 'pending') return
     const t = setTimeout(() => onDismiss(toast.id), 5000)
@@ -29,6 +32,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, x: 40, scale: 0.92 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -80,7 +84,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       <p className="text-sm text-[#231812] leading-relaxed font-mono">{toast.message}</p>
     </motion.div>
   )
-}
+})
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])

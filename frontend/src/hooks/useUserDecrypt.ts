@@ -16,16 +16,16 @@ export function useUserDecrypt() {
   const [error, setError] = useState<Error | null>(null)
 
   const decrypt = useCallback(
-    async (handle: string): Promise<bigint> => {
+    async (handle: string, contractAddress: `0x${string}` = DEX_ADDRESS): Promise<bigint> => {
       if (!address) throw new Error('Connect a wallet first')
       setDecrypting(true)
       setError(null)
       try {
         const fhe = await getFheInstance()
         const { publicKey, privateKey } = fhe.generateKeypair()
-        const start = Math.floor(Date.now() / 1000).toString()
-        const days = '7'
-        const eip712 = fhe.createEIP712(publicKey, [DEX_ADDRESS], start, days)
+        const start = Math.floor(Date.now() / 1000)
+        const days = 7
+        const eip712 = fhe.createEIP712(publicKey, [contractAddress], start, days)
 
         // viem derives EIP712Domain itself; drop it from the explicit types.
         const types = { ...(eip712.types as Record<string, unknown>) }
@@ -39,16 +39,16 @@ export function useUserDecrypt() {
         } as unknown as Parameters<typeof signTypedDataAsync>[0])
 
         const res = await fhe.userDecrypt(
-          [{ handle, contractAddress: DEX_ADDRESS }],
+          [{ handle, contractAddress }],
           privateKey,
           publicKey,
           signature,
-          [DEX_ADDRESS],
+          [contractAddress],
           address,
           start,
           days,
         )
-        return BigInt(res[handle] as string | number | bigint)
+        return BigInt(res[handle as `0x${string}`] as string | number | bigint)
       } catch (e) {
         setError(e as Error)
         throw e

@@ -17,7 +17,7 @@ import { ClearingResult } from '@/components/batch/ClearingResult'
 export default function Trade() {
   const { address } = useAccount()
   const { toast } = useToast()
-  const { ready: fheReady } = useFhe()
+  const { ready: fheReady, error: fheError, retry: retryFhe } = useFhe()
   const { data: batch } = useCurrentBatch()
   const { submit, step, reset } = useSubmitOrder()
   const { mint, minting } = useFaucet()
@@ -32,7 +32,9 @@ export default function Trade() {
 
   const onSubmit = async () => {
     if (!address) return toast('error', 'Connect a wallet')
-    if (!fheReady) return toast('error', 'Encryption still initialising')
+    if (!fheReady) {
+      return toast('error', fheError ? `Encryption init failed: ${fheError.message}` : 'Encryption still initialising')
+    }
     if (!valid) return toast('error', 'Enter a valid size')
     try {
       await submit({ side, tick, size: sizeNum })
@@ -134,10 +136,25 @@ export default function Trade() {
               Faucet: mint test tokens
             </Button>
           )}
-          <Button onClick={onSubmit} loading={busy} disabled={!valid || !isApproved}>
+          <Button onClick={onSubmit} loading={busy} disabled={!valid || !isApproved || !fheReady}>
             {submitLabel}
           </Button>
         </div>
+
+        {fheError && (
+          <div className="mt-3 rounded border border-[var(--accent-no)]/40 bg-[rgba(200,16,46,0.04)] p-3">
+            <p className="font-mono text-xs text-[var(--accent-no)]">
+              Encryption init failed: {fheError.message}
+            </p>
+            <p className="mt-2 font-serif text-xs text-text-muted">
+              Encrypted order submission is paused until the browser encryption SDK finishes setup.
+              Faucet minting can still work because it is a normal token transaction.
+            </p>
+            <Button className="mt-3" size="sm" variant="ghost" onClick={retryFhe}>
+              Retry encryption setup
+            </Button>
+          </div>
+        )}
 
         <p className="mt-4 font-serif text-xs text-text-subtle">
           🔒 Your price and size are encrypted in your browser before submission. No one — not even the

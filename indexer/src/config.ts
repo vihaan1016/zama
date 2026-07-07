@@ -13,6 +13,7 @@ const envSchema = z.object({
   CORS_ORIGINS: z.string().optional().default(''),
   // Block to start indexing from (deploy block); 0 = from genesis of the filter.
   START_BLOCK: z.string().optional().default('0').transform((s) => BigInt(s)),
+  BACKFILL_BLOCK_RANGE: z.string().optional().default('10').transform(Number).pipe(z.number().int().positive()),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -25,4 +26,4 @@ export const config = parsed.data;
 
 export const allowedOrigins = config.CORS_ORIGINS
   ? config.CORS_ORIGINS.split(',').map((o) => o.trim())
-  : ['http://localhost:5173', 'http://localhost:3000'];
+  : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];

@@ -39,7 +39,7 @@ Env (`.env.local`):
 ```bash
 NEXT_PUBLIC_CHAIN_ID=11155111
 NEXT_PUBLIC_RPC_URL=https://sepolia.rpc.zama.ai   # use a dedicated RPC; public ones 429 the decrypt flow
-NEXT_PUBLIC_RELAYER_URL=https://relayer.testnet.zama.cloud
+NEXT_PUBLIC_RELAYER_URL=https://relayer.testnet.zama.org
 NEXT_PUBLIC_DEX_ADDRESS=0x...
 NEXT_PUBLIC_BASE_TOKEN=0x...    # cETH  (base = asset being bought/sold)
 NEXT_PUBLIC_QUOTE_TOKEN=0x...   # cUSD  (quote = asset paid/received)
