@@ -1,4 +1,4 @@
-/** BatchAuctionDEX events the indexer watches, plus the current-batch view for snapshots. */
+/** BatchAuctionDEX events the indexer watches. */
 export const dexEventsAbi = [
   {
     type: 'event',
@@ -60,6 +60,33 @@ export const dexEventsAbi = [
     inputs: [
       { name: 'batchId', type: 'uint256', indexed: true },
       { name: 'filledOrders', type: 'uint256', indexed: false },
+    ],
+  },
+] as const
+
+/** Read-only BatchAuctionDEX views used to seed state if historical events were missed. */
+export const dexReadAbi = [
+  {
+    type: 'function',
+    name: 'getCurrentBatch',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [
+      {
+        name: '',
+        type: 'tuple',
+        components: [
+          { name: 'batchId', type: 'uint256' },
+          { name: 'startTime', type: 'uint256' },
+          { name: 'endTime', type: 'uint256' },
+          { name: 'status', type: 'uint8' },
+          { name: 'clearingPrice', type: 'uint256' },
+          { name: 'matchedVolume', type: 'uint256' },
+          { name: 'orderCount', type: 'uint256' },
+          { name: 'nextTick', type: 'uint256' },
+          { name: 'settleCursor', type: 'uint256' },
+        ],
+      },
     ],
   },
 ] as const
