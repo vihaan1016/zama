@@ -423,7 +423,7 @@ keeper/     Off-chain lifecycle keeper (TypeScript/viem)
 indexer/    Read-only event indexer — REST + socket.io (TypeScript/viem/Express)
 frontend/   Trading UI — Vite/React/wagmi, client-side FHE encryption + EIP-712 decryption
 infra/      Prometheus + Grafana provisioning (see docker-compose.yml)
-docs/       Architecture, audit, frontend guide, demo script, pitch deck
+docs/       Pitch deck (Concord_Deck.pdf / .pptx)
 ```
 
 ---
