@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { useAccount, usePublicClient, useWriteContract } from 'wagmi'
+import { encodeFunctionData } from 'viem'
+import { useAccount, usePublicClient, useWalletClient } from 'wagmi'
 import { useQueryClient } from '@tanstack/react-query'
 import { DEX_ADDRESS, DEX_ABI, OrderType } from '@/config/contracts'
 import { estimateGasLimit, getGasFees } from '@/lib/gas'
@@ -17,8 +18,8 @@ export interface SubmitParams {
 export function useSubmitOrder() {
   const { address } = useAccount()
   const publicClient = usePublicClient()
+  const { data: walletClient } = useWalletClient()
   const { encryptOrder } = useEncryptOrder()
-  const { writeContractAsync } = useWriteContract()
   const queryClient = useQueryClient()
 
   const [step, setStep] = useState<SubmitStep>('idle')
@@ -28,6 +29,7 @@ export function useSubmitOrder() {
   const submit = useCallback(
     async ({ side, tick, size }: SubmitParams) => {
       if (!address) throw new Error('Connect a wallet first')
+      if (!walletClient) throw new Error('Wallet client unavailable')
       setError(null)
       try {
         setStep('encrypting')
@@ -54,11 +56,15 @@ export function useSubmitOrder() {
         const gas = estimatedGas > 800_000n ? 800_000n : estimatedGas < 650_000n ? 650_000n : estimatedGas
         console.info('submitOrder gas limit', gas.toString())
         const fees = await getGasFees(publicClient)
-        const hash = await writeContractAsync({
-          address: DEX_ADDRESS,
+        const data = encodeFunctionData({
           abi: DEX_ABI,
           functionName: 'submitOrder',
-          args,
+          args: [...args],
+        })
+        const hash = await walletClient.sendTransaction({
+          account: address,
+          to: DEX_ADDRESS,
+          data,
           gas,
           ...fees,
         })
@@ -75,7 +81,7 @@ export function useSubmitOrder() {
         throw e
       }
     },
-    [address, encryptOrder, writeContractAsync, publicClient, queryClient],
+    [address, walletClient, encryptOrder, publicClient, queryClient],
   )
 
   const reset = useCallback(() => {
